@@ -1,17 +1,18 @@
 """
-correlacao.py — BÔNUS: Correlação temporal de brute force.
+core/correlacao.py — BÔNUS: Correlação temporal de brute force (+0,20).
 
-Detecta brute force considerando uma janela de tempo:
-mais de 5 logins falhos do mesmo IP dentro de 60 segundos.
-(O detector comum só conta o total, sem olhar o tempo.)
+O detector comum (core/detector.py) conta o TOTAL de falhas por IP.
+Aqui consideramos o TEMPO: mais de 5 logins falhos do mesmo IP
+dentro de uma janela de 60 segundos.
+(10 falhas em uma semana = alguém que esquece a senha;
+ 10 falhas em 30 segundos = robô testando senhas.)
 """
 
 import os
 from datetime import datetime
 
 FORMATO_DATA = "%Y-%m-%d %H:%M:%S"
-
-PASTA_PROJETO = os.path.dirname(os.path.abspath(__file__))
+PASTA_PROJETO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PASTA_LOGS = os.path.join(PASTA_PROJETO, "logs")
 
 
@@ -24,9 +25,7 @@ def agrupar_falhas_por_ip(eventos):
     for evento in eventos:
         if evento["fonte"] == "auth" and evento["tipo"] == "FAIL":
             horario = datetime.strptime(evento["timestamp"], FORMATO_DATA)
-            if evento["ip"] not in falhas_por_ip:
-                falhas_por_ip[evento["ip"]] = []
-            falhas_por_ip[evento["ip"]].append(horario)
+            falhas_por_ip.setdefault(evento["ip"], []).append(horario)
 
     for horarios in falhas_por_ip.values():
         horarios.sort()
@@ -56,9 +55,9 @@ def classificar_severidade(quantidade):
     """Mesma escala do enunciado: >20 CRITICA, >10 ALTA, >5 MEDIA."""
     if quantidade > 20:
         return "CRITICA"
-    elif quantidade > 10:
+    if quantidade > 10:
         return "ALTA"
-    elif quantidade > 5:
+    if quantidade > 5:
         return "MEDIA"
     return "BAIXA"
 
@@ -78,6 +77,7 @@ def detectar_brute_force_temporal(eventos, janela_segundos=60, threshold=5):
         alertas.append({
             "timestamp": inicio.strftime(FORMATO_DATA),
             "regra": "Brute Force Temporal",
+            "regra_id": "BFT",
             "severidade": classificar_severidade(quantidade),
             "ip": ip,
             "descricao": f"{quantidade} falhas em {duracao}s (janela de {janela_segundos}s)",
@@ -86,10 +86,9 @@ def detectar_brute_force_temporal(eventos, janela_segundos=60, threshold=5):
 
 
 if __name__ == "__main__":
-    from coletor import carregar_todos_os_logs
+    from core.coletor import carregar_todos_os_logs
 
     eventos = carregar_todos_os_logs(PASTA_LOGS)
-
     for janela in (60, 10):
         print(f"\n=== Mais de 5 falhas em {janela} segundos ===")
         alertas = detectar_brute_force_temporal(eventos, janela_segundos=janela)

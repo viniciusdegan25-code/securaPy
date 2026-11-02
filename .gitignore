@@ -1,7 +1,7 @@
-# Senhas e configurações locais: NUNCA enviar para o GitHub
-config/segredos.json
+# Segredos: NUNCA enviar para o GitHub
+.env
 
-# Arquivos gerados automaticamente
+# Gerados automaticamente
 __pycache__/
 logs_gerados/
 .venv/

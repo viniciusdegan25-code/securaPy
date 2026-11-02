@@ -1,0 +1,368 @@
+{
+  "gerado_em": "2026-11-02 00:24:06",
+  "total_eventos": 58,
+  "eventos_por_fonte": {
+    "auth": 23,
+    "firewall": 17,
+    "web": 18
+  },
+  "total_alertas": 35,
+  "alertas_por_severidade": {
+    "CRITICA": 3,
+    "ALTA": 12,
+    "MEDIA": 20,
+    "BAIXA": 0,
+    "INFO": 0
+  },
+  "ameacas": [
+    {
+      "ip": "185.220.101.1",
+      "motivos": [
+        "Brute force: 11 falhas de login",
+        "Port scan: 7 portas (21, 22, 23, 139, 445, 3306, 8080)",
+        "IP em blacklist"
+      ],
+      "quantidade_deteccoes": 3,
+      "severidade": "CRITICA",
+      "pontuacao": 3
+    },
+    {
+      "ip": "91.240.118.172",
+      "motivos": [
+        "Brute force: 5 falhas de login",
+        "Port scan: 3 portas (22, 445, 3389)",
+        "IP em blacklist"
+      ],
+      "quantidade_deteccoes": 3,
+      "severidade": "CRITICA",
+      "pontuacao": 3
+    },
+    {
+      "ip": "45.33.32.156",
+      "motivos": [
+        "IP em blacklist"
+      ],
+      "quantidade_deteccoes": 1,
+      "severidade": "ALTA",
+      "pontuacao": 2
+    }
+  ],
+  "alertas": [
+    {
+      "timestamp": "2025-02-20 08:20:08",
+      "regra": "Tentativa de Path Traversal",
+      "regra_id": "R003",
+      "severidade": "CRITICA",
+      "pontuacao": 9,
+      "ip": "91.240.118.172",
+      "descricao": "URL suspeita: /../../etc/passwd"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:02",
+      "regra": "Detector de Ameaças",
+      "regra_id": "DET",
+      "severidade": "CRITICA",
+      "ip": "185.220.101.1",
+      "descricao": "Brute force: 11 falhas de login | Port scan: 7 portas (21, 22, 23, 139, 445, 3306, 8080) | IP em blacklist"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:05",
+      "regra": "Detector de Ameaças",
+      "regra_id": "DET",
+      "severidade": "CRITICA",
+      "ip": "91.240.118.172",
+      "descricao": "Brute force: 5 falhas de login | Port scan: 3 portas (22, 445, 3389) | IP em blacklist"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:02",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "185.220.101.1",
+      "descricao": "Acesso bloqueado à porta crítica 22"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:05",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "91.240.118.172",
+      "descricao": "Acesso bloqueado à porta crítica 3389"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:06",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "185.220.101.1",
+      "descricao": "Acesso bloqueado à porta crítica 23"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:10",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "185.220.101.1",
+      "descricao": "Acesso bloqueado à porta crítica 445"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:12",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "45.33.32.156",
+      "descricao": "Acesso bloqueado à porta crítica 1433"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:20",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "91.240.118.172",
+      "descricao": "Acesso bloqueado à porta crítica 22"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:22",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "185.220.101.1",
+      "descricao": "Acesso bloqueado à porta crítica 3306"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:28",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "45.33.32.156",
+      "descricao": "Acesso bloqueado à porta crítica 5432"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:33",
+      "regra": "Acesso a Porta Crítica Bloqueado",
+      "regra_id": "R002",
+      "severidade": "ALTA",
+      "pontuacao": 7,
+      "ip": "91.240.118.172",
+      "descricao": "Acesso bloqueado à porta crítica 445"
+    },
+    {
+      "timestamp": "2025-02-20 08:20:15",
+      "regra": "Tentativa de XSS",
+      "regra_id": "R004",
+      "severidade": "ALTA",
+      "pontuacao": 8,
+      "ip": "45.33.32.156",
+      "descricao": "URL suspeita: /search?q=<script>alert(1)</script>"
+    },
+    {
+      "timestamp": "2025-02-20 08:10:12",
+      "regra": "Detector de Ameaças",
+      "regra_id": "DET",
+      "severidade": "ALTA",
+      "ip": "45.33.32.156",
+      "descricao": "IP em blacklist"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:01",
+      "regra": "Brute Force Temporal",
+      "regra_id": "BFT",
+      "severidade": "ALTA",
+      "ip": "185.220.101.1",
+      "descricao": "11 falhas em 39s (janela de 60s)"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:01",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:02",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'root'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:05",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "91.240.118.172",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:08",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:12",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "91.240.118.172",
+      "descricao": "Login FAIL com usuário privilegiado 'root'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:15",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "45.33.32.156",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:16",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:18",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'root'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:22",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:28",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'sa'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:30",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "91.240.118.172",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:33",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'root'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:38",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:40",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "185.220.101.1",
+      "descricao": "Login FAIL com usuário privilegiado 'root'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:45",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "91.240.118.172",
+      "descricao": "Login FAIL com usuário privilegiado 'admin'"
+    },
+    {
+      "timestamp": "2025-02-20 08:15:48",
+      "regra": "Login com Usuário Privilegiado",
+      "regra_id": "R001",
+      "severidade": "MEDIA",
+      "pontuacao": 6,
+      "ip": "45.33.32.156",
+      "descricao": "Login FAIL com usuário privilegiado 'oracle'"
+    },
+    {
+      "timestamp": "2025-02-20 08:20:06",
+      "regra": "Reconhecimento Web",
+      "regra_id": "R005",
+      "severidade": "MEDIA",
+      "pontuacao": 5,
+      "ip": "185.220.101.1",
+      "descricao": "Acesso a URL de reconhecimento: /admin"
+    },
+    {
+      "timestamp": "2025-02-20 08:20:18",
+      "regra": "Reconhecimento Web",
+      "regra_id": "R005",
+      "severidade": "MEDIA",
+      "pontuacao": 5,
+      "ip": "91.240.118.172",
+      "descricao": "Acesso a URL de reconhecimento: /wp-admin"
+    },
+    {
+      "timestamp": "2025-02-20 08:20:20",
+      "regra": "Reconhecimento Web",
+      "regra_id": "R005",
+      "severidade": "MEDIA",
+      "pontuacao": 5,
+      "ip": "91.240.118.172",
+      "descricao": "Acesso a URL de reconhecimento: /phpmyadmin"
+    },
+    {
+      "timestamp": "2025-02-20 08:20:28",
+      "regra": "Reconhecimento Web",
+      "regra_id": "R005",
+      "severidade": "MEDIA",
+      "pontuacao": 5,
+      "ip": "45.33.32.156",
+      "descricao": "Acesso a URL de reconhecimento: /shell.php"
+    }
+  ],
+  "persistencia": {
+    "banco_disponivel": true,
+    "eventos_novos": 0,
+    "alertas_novos": 35
+  }
+}
