@@ -12,7 +12,7 @@
 | Nome | RM | Responsabilidade |
 |---|---|---|
 | PREENCHER | PREENCHER | Pessoa 1: Núcleo do sistema e banco de dados |
-| PREENCHER | PREENCHER | Pessoa 2: Machine Learning e integridade (SHA-256) |
+| [GabrielDav07]([url](https://github.com/GabrielDav07)) | PREENCHER | Pessoa 2: Machine Learning e integridade (SHA-256) |
 | PREENCHER | PREENCHER | Pessoa 3: API REST (Flask) e Docker |
 | PREENCHER | PREENCHER | Pessoa 4: Dashboard web e assistente com LLM |
 
