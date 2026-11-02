@@ -35,30 +35,40 @@ machine learning para priorizar alertas, dashboard web, explicações com LLM e 
 ```
 securaPy_platform/
 ├── core/                       # NÚCLEO (Módulo A)
-│   ├── coletor.py              #   leitura e normalização dos logs
-│   ├── regras.py               #   motor de regras (config/regras.json)
-│   ├── detector.py             #   brute force, port scan, blacklist
-│   └── correlacao.py           #   BÔNUS: brute force por janela de tempo
-├── db/                         # PERSISTÊNCIA (Módulo B)
-│   ├── configuracao.py         #   lê o .env (segredos fora do código)
-│   ├── mongo_repo.py           #   eventos e alertas no MongoDB
-│   └── mysql_repo.py           #   usuários e login no MySQL
-├── alertas/                    # TEMPO REAL (Módulo A)
-│   ├── servidor_alertas.py     #   servidor TCP com broadcast
-│   └── cliente_alertas.py      #   console do analista
+│   ├── coletor.py               # Leitura e normalização dos logs
+│   ├── regras.py                # Motor de regras (config/regras.json)
+│   ├── detector.py              # Brute force, port scan e blacklist
+│   └── correlacao.py            # Bônus: brute force por janela de tempo
+├── db/                          # PERSISTÊNCIA (Módulo B)
+│   ├── configuracao.py          # Lê o .env
+│   ├── mongo_repo.py            # Eventos e alertas no MongoDB
+│   └── mysql_repo.py            # Usuários e login no MySQL
+├── alertas/                     # TEMPO REAL (Módulo A)
+│   ├── servidor_alertas.py      # Servidor TCP com broadcast
+│   └── cliente_alertas.py       # Console do analista
 ├── ferramentas/
-│   └── gerador_logs.py         #   gera logs de teste com ataques (dados para o ML)
-├── ml/                         # PREENCHER — Pessoa 2 (Módulo C)
-├── api/                        # PREENCHER — Pessoa 3 (Módulo D)
-├── web/                        # PREENCHER — Pessoa 4 (Módulo E)
-├── ia/                         # PREENCHER — Pessoa 4 (Módulo G)
-├── config/regras.json          # regras de detecção (editáveis sem mexer no código)
-├── logs/                       # auth.log, firewall.log, web_access.log
-├── saida/                      # relatórios JSON gerados
-├── analisar.py                 # executa o fluxo completo e salva no banco
-├── migrar_logs.py              # migração dos logs para o MongoDB
-├── .env.exemplo                # modelo das variáveis de ambiente
-├── requirements.txt
+│   └── gerador_logs.py          # Gera logs de teste usados pelo ML
+├── ml/                         # MACHINE LEARNING (Módulo C — Pessoa 2)
+│   ├── __init__.py              # Identifica ml como pacote Python
+│   ├── features.py              # Extrai características dos eventos por IP
+│   ├── treinar.py               # Treina e avalia o modelo; salva modelo e métricas
+│   ├── classificar.py           # Verifica o hash e classifica ameaças
+│   ├── test_ml.py               # Testes automatizados do Módulo C
+│   ├── requirements.txt         # Dependências específicas do ML
+│   ├── metricas.json            # Métricas geradas pelo treinamento
+│   ├── modelo.pkl               # Modelo treinado, gerado pelo treinamento
+│   └── modelo.sha256            # Hash SHA-256 do modelo salvo
+├── api/                        # Módulo D — ainda não incluído
+├── web/                        # Módulo E — ainda não incluído
+├── ia/                         # Módulo G — ainda não incluído
+├── config/
+│   └── regras.json              # Regras de detecção
+├── logs/                        # auth.log, firewall.log e web_access.log
+├── saida/                       # Relatórios gerados
+├── analisar.py                  # Executa o fluxo de análise e salva no banco
+├── migrar_logs.py               # Migra logs para o MongoDB
+├── .env.exemplo                 # Modelo das variáveis de ambiente
+├── requirements.txt             # Dependências gerais do projeto
 └── README.md
 ```
 
