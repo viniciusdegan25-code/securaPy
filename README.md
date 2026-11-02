@@ -204,13 +204,67 @@ Resultado verificado: 178 eventos lidos sem nenhum aviso, e o IP de brute force 
 
 **Responsável:** GabrielDav07
 
-Os arquivos da Pessoa 2 ficam na pasta `ml/`: `features.py`, `treinar.py`, `classificar.py`, `requirements.txt` e `test_ml.py`.
+O Módulo C fica na pasta `ml/` e complementa os eventos do coletor e os alertas do correlacionador dos módulos A/B.
 
-Em `features.py`, `extrair_features()` agrupa os eventos do coletor por IP e calcula atributos como falhas de autenticação, portas distintas, erros web, quantidade total de eventos, bloqueios de firewall e presença em uma blacklist. `features_de_ameaca()` adapta os alertas produzidos pelo correlacionador da Pessoa 1.
+#### Arquivos e funções
 
-Em `treinar.py`, a função `treinar()` treina um pipeline com `StandardScaler` e `RandomForestClassifier`. O treinamento precisa de rótulos revisados pela equipe para as classes `ataque` e `normal`. A avaliação usa validação cruzada estratificada e calcula precisão, recall e F1, considerando `ataque` como classe positiva. **Os valores das métricas devem ser registrados após executar o treinamento com dados e rótulos definidos pela equipe; não há resultados numéricos disponíveis nesta entrega.**
+| Arquivo | Funções principais | Responsabilidade |
+|---|---|---|
+| `features.py` | `extrair_features()` e `features_de_ameaca()` | Extrai atributos dos eventos por IP e adapta alertas ao formato de entrada do classificador. |
+| `treinar.py` | `treinar()`, `construir_pipeline()` e `sha256_arquivo()` | Treina e avalia o modelo, salva o artefato com `joblib` e gera seu hash SHA-256. |
+| `classificar.py` | `carregar_modelo()`, `pontuar()` e `classificar_features()` | Confere o hash antes de carregar o modelo e classifica alertas, acrescentando score e faixa de risco. |
+| `test_ml.py` | Testes de contrato e integridade | Verifica a extração de atributos, a adaptação de alertas B e se uma divergência no hash impede o carregamento do modelo. |
+| `requirements.txt` | — | Lista as dependências de Machine Learning e testes. |
 
-Em `classificar.py`, `carregar_modelo()` confere o SHA-256 antes de carregar o modelo. `pontuar()` classifica os alertas e acrescenta um score e uma faixa de risco. O modelo treinado é salvo com `joblib`, e seu hash é registrado em um arquivo `.sha256`. **Nesta implementação, o hash protege o arquivo do modelo, não os arquivos de log.**
+#### Atributos extraídos
+
+Os eventos são agrupados por IP. O extrator usa os campos normalizados pelo coletor, como `fonte`, `tipo`, `ip` e `detalhes`.
+
+| Atributo | Como é calculado |
+|---|---|
+| `falhas_auth` | Quantidade de eventos de autenticação com tipo `FAIL`. |
+| `portas_distintas` | Quantidade de portas diferentes encontradas no campo `dport` dos eventos de firewall. |
+| `ip_blacklist` | Indica se o IP aparece na blacklist informada ao sistema. |
+| `erros_web` | Quantidade de eventos web cujo status HTTP é 400 ou superior. |
+| `eventos_total` | Quantidade total de eventos associados ao IP. |
+| `bloqueios_firewall` | Quantidade de eventos de firewall com tipo `BLOCK`. |
+
+O alerta emitido pelo correlacionador B contém `timestamp`, `regra`, `severidade`, `ip` e `descricao`. Quando `pontuar()` recebe também os eventos originais, calcula os atributos completos do IP. Sem os eventos, consegue recuperar da descrição apenas a contagem explícita de falhas; os demais atributos ficam neutros.
+
+#### Treinamento e avaliação
+
+A função `treinar()` recebe os eventos e um mapa de rótulos revisados pela equipe, associando IPs às classes `ataque` ou `normal`. O modelo é um pipeline com `StandardScaler` e `RandomForestClassifier`. O pipeline é avaliado por validação cruzada estratificada, com até cinco divisões, limitado pela quantidade de exemplos da classe minoritária. São necessários pelo menos dois IPs rotulados em cada classe.
+
+| Métrica | O que representa |
+|---|---|
+| Precisão | Entre os IPs classificados como ataque, quantos estavam rotulados como ataque. |
+| Recall | Entre os IPs rotulados como ataque, quantos foram encontrados pelo modelo. |
+| F1 | Equilíbrio entre precisão e recall. |
+
+As métricas tratam `ataque` como classe positiva. O programa calcula e exibe a média dos folds durante o treinamento. **Os valores obtidos devem ser preenchidos após uma execução com dados e rótulos definidos pela equipe; esta documentação não informa resultados numéricos que ainda não foram medidos.**
+
+Para instalar as dependências e executar os testes a partir da raiz do repositório:
+
+```bash
+python -m pip install -r ml/requirements.txt
+python -m pytest ml/test_ml.py
+```
+
+Para treinar com arquivos próprios de eventos e rótulos:
+
+```bash
+python -m ml.treinar --eventos-json eventos.json --rotulos-json rotulos.json --modelo ml/modelo.pkl
+```
+
+O arquivo `rotulos.json` deve conter rótulos revisados, por exemplo, no formato `{ "IP": "ataque" }` ou `{ "IP": "normal" }`. Não se deve usar a previsão do próprio modelo como rótulo de referência.
+
+#### Persistência e integridade
+
+Após o treinamento, o modelo é salvo em formato `joblib`, por exemplo, `ml/modelo.pkl`. A função `sha256_arquivo()` calcula o SHA-256 desse arquivo, e o resultado é registrado ao lado dele em `ml/modelo.pkl.sha256`.
+
+Antes de chamar `joblib.load()`, `carregar_modelo()` compara o hash atual do modelo com o valor registrado. Se os valores forem diferentes, o carregamento é interrompido. O hash permite detectar alterações no artefato, desde que o arquivo de referência seja mantido confiável.
+
+**Nesta implementação, a verificação SHA-256 é feita sobre o arquivo do modelo, não sobre os logs.**
 
 ---
 
