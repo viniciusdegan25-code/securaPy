@@ -12,7 +12,7 @@
 | Nome | RM | Responsabilidade | Módulos |
 |---|---|---|---|
 | Vinicius | 569279 | Núcleo + Persistência | A, B |
-| PREENCHER | PREENCHER | Machine Learning | C |
+| Gabriel D | PREENCHER | Machine Learning | C |
 | PREENCHER | PREENCHER | API REST + Docker | D, F |
 | PREENCHER | PREENCHER | Web + LLM | E, G |
 
