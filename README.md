@@ -188,9 +188,36 @@ reorganizado em camadas (`core/`, `alertas/`) e integrado à persistência (`db/
 
 ### Pessoa 2 — Machine Learning (Módulo C)
 
-**Responsável:** PREENCHER
+**Responsável:** Gabriel D
 
-PREENCHER: `ml/treinar.py`, `ml/classificar.py`, métricas (precisão, recall, F1), hash SHA-256 do `modelo.pkl`.
+O Módulo C está na pasta `ml/` e complementa a análise do núcleo A/B. Ele transforma eventos em atributos numéricos por IP, treina um classificador, avalia suas métricas e usa o modelo para priorizar ameaças.
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `ml/features.py` | Monta seis atributos por IP: falhas de autenticação, maior rajada de falhas em 60 segundos, portas bloqueadas distintas, respostas web HTTP 4xx, total de eventos e presença na blacklist. Reaproveita funções de `core.detector`, `core.correlacao` e `core.regras`. |
+| `ml/treinar.py` | Gera exemplos com `ferramentas/gerador_logs.py`, usa o gabarito do gerador para rotular os IPs como `ataque` ou `normal`, treina o modelo e calcula as métricas por validação cruzada estratificada. |
+| `ml/classificar.py` | Confere o SHA-256 antes de carregar o modelo, classifica ameaças e permite consultar um IP individual com `classificar_ip()`. |
+| `ml/test_ml.py` | Testa a extração de atributos, o relatório de métricas, a classificação dos IPs dos cenários C2/C3, a ordenação das ameaças e a rejeição de um modelo com hash incorreto. |
+| `ml/requirements.txt` | Lista as dependências do Módulo C. |
+| `ml/__init__.py` | Permite importar `ml` como pacote Python. |
+
+O treinamento usa `RandomForestClassifier` dentro de um `Pipeline` com `StandardScaler`. Os dados são gerados com 40 sementes (`0` a `39`) e 50 exemplos de tráfego normal por geração. O gabarito do gerador fornece os rótulos de ataque; assim, o sistema não usa a blacklist para definir esses rótulos.
+
+**Resultado desta execução:** 1.936 amostras, avaliadas em 5 folds.
+
+| Métrica | Resultado |
+|---|---:|
+| Precisão média | 1,0000 |
+| Recall médio | 1,0000 |
+| F1 médio | 1,0000 |
+
+Essas métricas foram obtidas com logs sintéticos gerados pelo próprio projeto e não demonstram o mesmo desempenho em logs reais. Os resultados reais dependem dos dados usados e podem ser diferentes.
+
+Depois do treino, `ml/treinar.py` salva `ml/modelo.pkl`, registra o hash SHA-256 em `ml/modelo.sha256` e grava as métricas em `ml/metricas.json`. A classificação verifica o hash antes de carregar o arquivo do modelo. Essa verificação protege o modelo; **não calcula o hash dos arquivos de log**.
+
+Nos cenários de classificação executados, `185.220.101.1` recebeu score `1,0000`, risco **ALTO** e rótulo **ataque**. `192.168.1.10` recebeu score `0,2600`, risco **BAIXO** e rótulo **normal**.
+
+Os testes foram executados com `python -m pytest ml/test_ml.py`: **6 aprovados**. O aviso de depreciação exibido pelo plugin do `pytest` não impediu a execução.
 
 ---
 
