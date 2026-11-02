@@ -1,0 +1,22 @@
+{
+  "amostras": 1936,
+  "amostras_por_classe": {
+    "ataque": 120,
+    "normal": 1816
+  },
+  "validacao_cruzada": {
+    "folds": 5,
+    "precisao_media": 1.0,
+    "recall_medio": 1.0,
+    "f1_medio": 1.0
+  },
+  "features": [
+    "falhas_auth",
+    "maior_rajada_60s",
+    "portas_distintas",
+    "erros_web_4xx",
+    "eventos_total",
+    "ip_blacklist"
+  ],
+  "sha256_modelo": "f64182d8dbb498893bd133f70b57e6f91a579585879db86b06ef6c8c80274910"
+}
