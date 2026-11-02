@@ -39,7 +39,7 @@ securaPy_platform/
 │   ├── regras.py                # Motor de regras (config/regras.json)
 │   ├── detector.py              # Brute force, port scan e blacklist
 │   └── correlacao.py            # Bônus: brute force por janela de tempo
-├── db/                          # PERSISTÊNCIA (Módulo B)
+├── db/                         # PERSISTÊNCIA (Módulo B)
 │   ├── configuracao.py          # Lê o .env
 │   ├── mongo_repo.py            # Eventos e alertas no MongoDB
 │   └── mysql_repo.py            # Usuários e login no MySQL
