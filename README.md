@@ -52,7 +52,14 @@ securaPy/
 ├── logs_gerados/       # Criada pelo gerador_logs.py
 ├── config/
 ├── saida/              # Relatórios gerados
-├── PREENCHER           # arquivos da Pessoa 2
+├── ml/                 # Pessoa 2 — Machine Learning e integridade
+│   ├── __init__.py
+│   ├── features.py
+│   ├── treinar.py
+│   ├── classificar.py
+│   ├── requirements.txt
+│   ├── test_ml.py
+│   └── README.md
 ├── PREENCHER           # arquivos da Pessoa 3
 ├── PREENCHER           # arquivos da Pessoa 4
 └── README.md
@@ -195,9 +202,15 @@ Resultado verificado: 178 eventos lidos sem nenhum aviso, e o IP de brute force 
 
 ### Pessoa 2 — Machine Learning e integridade (SHA-256)
 
-**Responsável:** PREENCHER
+**Responsável:** GabrielDav07
 
-PREENCHER: arquivos, funções, como o modelo foi treinado, métricas obtidas e verificação de hash dos logs.
+Os arquivos da Pessoa 2 ficam na pasta `ml/`: `features.py`, `treinar.py`, `classificar.py`, `requirements.txt` e `test_ml.py`.
+
+Em `features.py`, `extrair_features()` agrupa os eventos do coletor por IP e calcula atributos como falhas de autenticação, portas distintas, erros web, quantidade total de eventos, bloqueios de firewall e presença em uma blacklist. `features_de_ameaca()` adapta os alertas produzidos pelo correlacionador da Pessoa 1.
+
+Em `treinar.py`, a função `treinar()` treina um pipeline com `StandardScaler` e `RandomForestClassifier`. O treinamento precisa de rótulos revisados pela equipe para as classes `ataque` e `normal`. A avaliação usa validação cruzada estratificada e calcula precisão, recall e F1, considerando `ataque` como classe positiva. **Os valores das métricas devem ser registrados após executar o treinamento com dados e rótulos definidos pela equipe; não há resultados numéricos disponíveis nesta entrega.**
+
+Em `classificar.py`, `carregar_modelo()` confere o SHA-256 antes de carregar o modelo. `pontuar()` classifica os alertas e acrescenta um score e uma faixa de risco. O modelo treinado é salvo com `joblib`, e seu hash é registrado em um arquivo `.sha256`. **Nesta implementação, o hash protege o arquivo do modelo, não os arquivos de log.**
 
 ---
 
