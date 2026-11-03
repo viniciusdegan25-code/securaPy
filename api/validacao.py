@@ -8,11 +8,13 @@ ValidacaoError com uma mensagem curta e segura para mostrar ao cliente
 
 import ipaddress
 import os
+import re
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 SEVERIDADES = ("CRITICA", "ALTA", "MEDIA", "BAIXA", "INFO")
 FORMATO_TIMESTAMP = "%Y-%m-%d %H:%M:%S"
+PADRAO_TIMESTAMP = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
 TAMANHO_PADRAO = 20
 TAMANHO_MAXIMO = 100
 MAXIMO_EVENTOS = 5000
@@ -35,6 +37,18 @@ def validar_ip(valor):
         raise ValidacaoError("ip inválido") from None
 
 
+def validar_texto_utf8(valor):
+    """
+    Garante que o texto pode virar UTF-8. O JSON aceita "\\ud800" (surrogate solitário),
+    que o Python lê sem erro mas que quebra mais adiante no banco e no hash da senha.
+    """
+    try:
+        valor.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ValidacaoError("texto com caracteres inválidos") from None
+    return valor
+
+
 def validar_severidade(valor):
     """Confere se a severidade é uma das cinco conhecidas."""
     if not isinstance(valor, str) or valor not in SEVERIDADES:
@@ -47,6 +61,9 @@ def validar_periodo(valor):
     if valor is None:
         return None
     try:
+        # o padrão exige zeros à esquerda: o Mongo compara datas como texto
+        if not PADRAO_TIMESTAMP.fullmatch(valor):
+            raise ValueError
         datetime.strptime(valor, FORMATO_TIMESTAMP)
     except (TypeError, ValueError):
         raise ValidacaoError("data inválida, use AAAA-MM-DD HH:MM:SS") from None
@@ -75,6 +92,7 @@ def _texto(corpo, campo, maximo, obrigatorio_nao_vazio=False):
     valor = corpo.get(campo)
     if not isinstance(valor, str) or len(valor) > maximo:
         raise ValidacaoError(f"{campo} inválido")
+    validar_texto_utf8(valor)
     if obrigatorio_nao_vazio and not valor.strip():
         raise ValidacaoError(f"{campo} inválido")
     return valor
@@ -97,9 +115,17 @@ def _validar_pasta(valor, pasta_base):
     """Resolve a pasta e garante que ela fica dentro de pasta_base (anti path traversal)."""
     if not isinstance(valor, str) or not valor.strip() or "\x00" in valor:
         raise ValidacaoError("pasta inválida")
+    # caminho absoluto, com drive (D:\x) ou de rede (\\srv\share) nunca é aceito
+    windows = PureWindowsPath(valor)
+    if PurePosixPath(valor).is_absolute() or windows.drive or windows.anchor:
+        raise ValidacaoError("pasta inválida")
     base = Path(os.path.realpath(pasta_base))
     alvo = Path(os.path.realpath(base / valor))
-    if os.path.commonpath([base, alvo]) != str(base):
+    try:
+        dentro_da_base = os.path.commonpath([base, alvo]) == str(base)
+    except ValueError:
+        dentro_da_base = False
+    if not dentro_da_base or not alvo.is_dir():
         raise ValidacaoError("pasta inválida")
     return alvo
 
@@ -112,7 +138,7 @@ def _validar_evento(evento):
         valor = evento.get(campo)
         if not isinstance(valor, str) or len(valor) > MAXIMO_TEXTO_EVENTO:
             raise ValidacaoError(f"evento inválido: {campo}")
-        limpo[campo] = valor
+        limpo[campo] = validar_texto_utf8(valor)
     limpo["ip"] = validar_ip(limpo["ip"])
     if limpo["fonte"] not in FONTES:
         raise ValidacaoError("evento inválido: fonte")

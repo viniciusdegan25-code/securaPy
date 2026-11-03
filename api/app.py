@@ -112,7 +112,9 @@ def create_app(config=None, deps=None):
 
     @app.after_request
     def registrar_acesso(resposta):
-        app.logger.info("%s %s %s", request.method, request.path, resposta.status_code)
+        # unicode_escape: quebra de linha vinda da URL não pode forjar linhas no log
+        caminho = request.path.encode("unicode_escape").decode("ascii")
+        app.logger.info("%s %s %s", request.method, caminho, resposta.status_code)
         return resposta
 
     return app

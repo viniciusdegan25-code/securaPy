@@ -127,3 +127,39 @@ def test_corpo_analise_aceita_evento_de_firewall_bem_formado(tmp_path):
     bloqueio = {**EVENTO, "fonte": "firewall", "tipo": "BLOCK",
                 "detalhes": "proto=TCP dst=10.0.0.1 dport=22"}
     assert validar_corpo_analise({"eventos": [bloqueio]}, tmp_path) == {"eventos": [bloqueio]}
+
+
+# --- correções da revisão final -------------------------------------------------
+
+@pytest.mark.parametrize("valor", ["\ud800", "abc\udfff"])
+def test_texto_com_surrogate_solitario_vira_400_e_nao_500(tmp_path, valor):
+    with pytest.raises(ValidacaoError):
+        validar_corpo_alerta({**CORPO_ALERTA, "regra": valor})
+    with pytest.raises(ValidacaoError):
+        validar_corpo_alerta({**CORPO_ALERTA, "descricao": valor})
+    with pytest.raises(ValidacaoError):
+        validar_corpo_analise({"eventos": [{**EVENTO, "detalhes": valor}]}, tmp_path)
+
+
+@pytest.mark.parametrize("valor", ["2025-3-1 0:0:0", "2025-03-01 10:00", " 2025-03-01 10:00:00",
+                                   "2025-03-01 10:00:00 ", "2025-03-01T10:00:00"])
+def test_periodo_exige_formato_exato_com_zeros_a_esquerda(valor):
+    with pytest.raises(ValidacaoError):
+        validar_periodo(valor)
+
+
+def test_pasta_precisa_ser_um_diretorio_que_existe(tmp_path):
+    (tmp_path / "auth.log").write_text("x")
+    for invalida in ("auth.log", "nao_existe"):
+        with pytest.raises(ValidacaoError):
+            validar_corpo_analise({"pasta": invalida}, tmp_path)
+
+
+@pytest.mark.parametrize("pasta", ["D:\\x", "C:/x", "\\\\srv\\share\\x", "//srv/share"])
+def test_pasta_com_drive_ou_caminho_de_rede_e_rejeitada(tmp_path, pasta):
+    try:
+        (tmp_path / pasta).mkdir(parents=True, exist_ok=True)   # nome literal no Linux
+    except OSError:
+        pass
+    with pytest.raises(ValidacaoError):
+        validar_corpo_analise({"pasta": pasta}, tmp_path)

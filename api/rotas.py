@@ -13,7 +13,8 @@ from flask import Blueprint, current_app, jsonify, request
 from api.auth import emitir_token, exige_token
 from api.servico import analisar_com_ml
 from api.validacao import (ValidacaoError, validar_corpo_alerta, validar_corpo_analise,
-                           validar_ip, validar_paginacao, validar_periodo, validar_severidade)
+                           validar_ip, validar_paginacao, validar_periodo, validar_severidade,
+                           validar_texto_utf8)
 from core.coletor import carregar_todos_os_logs
 from db import consultas_api, mysql_repo
 from db.configuracao import PASTA_LOGS
@@ -61,6 +62,8 @@ def login():
     if (not isinstance(corpo, dict) or not isinstance(corpo.get("email"), str)
             or not isinstance(corpo.get("senha"), str)):
         raise ValidacaoError("envie email e senha")
+    validar_texto_utf8(corpo["email"])
+    validar_texto_utf8(corpo["senha"])
 
     conexao = _deps().mysql()
     if conexao is None:

@@ -127,3 +127,15 @@ def test_cada_requisicao_gera_linha_de_log_de_acesso(cliente, caplog):
 def test_json_preserva_acentos_em_vez_de_escapes(cliente):
     resposta = cliente.get("/api/nao-existe")
     assert "não encontrado" in resposta.get_data(as_text=True)
+
+
+def test_login_com_surrogate_solitario_devolve_400(cliente):
+    corpo = '{"email":"a@b.c","senha":"\\ud800"}'
+    assert cliente.post("/api/login", data=corpo, content_type="application/json").status_code == 400
+
+
+def test_log_de_acesso_nao_aceita_quebra_de_linha_vinda_da_url(cliente, caplog):
+    with caplog.at_level(logging.INFO):
+        cliente.get("/api/alertas/abc%0A[2026-01-01]%20INFO%20FORJADO")
+    mensagens = [r.getMessage() for r in caplog.records if r.name == "api.app"]
+    assert mensagens and all("\n" not in m for m in mensagens)

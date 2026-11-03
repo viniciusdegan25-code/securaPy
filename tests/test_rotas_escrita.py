@@ -124,3 +124,21 @@ def test_lote_que_quebra_o_nucleo_devolve_400_e_pasta_devolve_500(cliente, token
     assert lote.get_json() == {"erro": "eventos em formato inesperado"}
     pasta = cliente.post("/api/analisar", json={"pasta": "."}, headers=cabecalho(token_valido))
     assert pasta.status_code == 500
+
+
+def test_surrogate_solitario_no_json_devolve_400_nos_posts(cliente, token_valido):
+    alerta = ('{"timestamp":"2025-03-01 10:00:00","regra":"\\ud800","ip":"1.2.3.4",'
+              '"severidade":"ALTA","descricao":"x"}')
+    lote = ('{"eventos":[{"fonte":"auth","ip":"1.2.3.4","timestamp":"2025-02-20 08:00:00",'
+            '"tipo":"FAIL","detalhes":"\\ud800","linha_original":"l"}]}')
+    for rota, corpo in (("/api/alertas", alerta), ("/api/analisar", lote)):
+        resposta = cliente.post(rota, data=corpo, content_type="application/json",
+                                headers=cabecalho(token_valido))
+        assert resposta.status_code == 400, rota
+
+
+def test_analisar_pasta_que_e_arquivo_ou_nao_existe_devolve_400(cliente, token_valido):
+    for pasta in ("auth.log", "nao_existe"):
+        resposta = cliente.post("/api/analisar", json={"pasta": pasta},
+                                headers=cabecalho(token_valido))
+        assert resposta.status_code == 400, pasta
