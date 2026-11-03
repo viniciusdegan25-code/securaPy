@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}{{ ip }} · SecuraPy{% endblock %}
+{% block conteudo %}
+<p><a href="{{ url_for('dashboard') }}">← Voltar ao painel</a></p>
+<div class="page-heading"><div><p class="eyebrow">INVESTIGAÇÃO DE IP</p><h1 class="mono">{{ ip }}</h1></div></div>
+<section class="panel"><h2>Alertas relacionados</h2><div class="table-wrap"><table><thead><tr><th>Horário</th><th>Severidade</th><th>Regra</th><th>Descrição</th><th>Triagem</th></tr></thead><tbody>
+{% for linha in triagens %}{% set alerta = linha.alerta %}<tr><td class="mono">{{ alerta.timestamp }}</td><td><span class="badge {{ alerta.severidade|lower }}">{{ alerta.severidade }}</span></td><td>{{ alerta.regra }}</td><td>{{ alerta.descricao }}</td><td><strong>{{ linha.resultado.classificacao }}</strong><br><span class="muted">{{ linha.resultado.explicacao }}</span><form method="post" action="{{ url_for('consultar_assistente', ip=ip) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="indice" value="{{ loop.index0 }}"><button class="link-button" type="submit">Consultar assistente</button></form></td></tr>{% else %}<tr><td colspan="5" class="muted">Nenhum alerta para este IP.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="panel section-gap"><h2>Eventos relacionados</h2><div class="table-wrap"><table><thead><tr><th>Horário</th><th>Fonte</th><th>Tipo</th><th>Detalhes</th></tr></thead><tbody>
+{% for evento in eventos %}<tr><td class="mono">{{ evento.timestamp }}</td><td>{{ evento.fonte }}</td><td>{{ evento.tipo }}</td><td>{{ evento.detalhes }}</td></tr>{% else %}<tr><td colspan="4" class="muted">Nenhum evento para este IP.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}
