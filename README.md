@@ -13,7 +13,7 @@
 |---|---|---|---|
 | Vinicius | 569279 | Núcleo + Persistência | A, B |
 | Gabriel D | PREENCHER | Machine Learning | C |
-| Samuel Gonçalves | API REST + Docker | D, F |
+| Samuel Gonçalves | PREENCHER | API REST + Docker | D, F |
 | PREENCHER | PREENCHER | Web + LLM | E, G |
 
 ---
