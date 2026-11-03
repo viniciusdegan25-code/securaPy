@@ -1,0 +1,77 @@
+# SecuraPy (Módulo F): API + MongoDB + MySQL na mesma rede, com um comando só.
+#
+#   cp .env.exemplo .env      (preencha JWT_SECRET e MYSQL_ROOT_PASSWORD)
+#   docker compose up --build
+#
+# Só a API publica porta no computador (8000). Os bancos ficam acessíveis
+# apenas pela rede interna "securapy-net". Os dados ficam em volumes nomeados.
+
+name: securapy
+
+services:
+  api:
+    build: .
+    image: securapy-api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Dentro do Compose os bancos são os contêineres; estas linhas
+      # têm prioridade sobre o que estiver no .env (ex.: o Atlas do desenvolvimento).
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_BANCO: securapy
+      MYSQL_HOST: mysql
+      MYSQL_PORTA: "3306"
+      MYSQL_USUARIO: root
+      MYSQL_SENHA: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_BANCO: securapy
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      JWT_EXPIRA_MINUTOS: ${JWT_EXPIRA_MINUTOS:-60}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - securapy-net
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-dados:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - securapy-net
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_DATABASE: securapy
+    volumes:
+      - mysql-dados:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - securapy-net
+    restart: unless-stopped
+
+networks:
+  securapy-net:
+
+volumes:
+  mongo-dados:
+  mysql-dados:

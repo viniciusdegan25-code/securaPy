@@ -7,5 +7,5 @@ gunicorn>=22
 requests>=2.31
 docker>=7.0
 numpy>=1.26
-scikit-learn>=1.4
+scikit-learn==1.9.0   # mesma versão que treinou ml/modelo.pkl
 joblib>=1.3

@@ -94,7 +94,8 @@ def create_app(config=None, deps=None):
     app = Flask(__name__)
     app.logger.setLevel(os.environ.get("LOG_LEVEL", "INFO").upper())   # log de acesso (OWASP A09)
     app.config["MAX_CONTENT_LENGTH"] = MAXIMO_CORPO_BYTES
-    app.config["JSON_SORT_KEYS"] = False
+    app.json.ensure_ascii = False   # acentos legíveis nas respostas em português
+    app.json.sort_keys = False
     app.config["JWT_SECRET"] = os.environ.get("JWT_SECRET", "")
     app.config["JWT_EXPIRA_MINUTOS"] = _ler_minutos(os.environ.get("JWT_EXPIRA_MINUTOS"))
     if config:

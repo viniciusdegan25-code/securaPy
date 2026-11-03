@@ -122,3 +122,8 @@ def test_cada_requisicao_gera_linha_de_log_de_acesso(cliente, caplog):
     with caplog.at_level(logging.INFO):
         cliente.get("/api/saude")
     assert any("GET /api/saude 200" in r.getMessage() for r in caplog.records)
+
+
+def test_json_preserva_acentos_em_vez_de_escapes(cliente):
+    resposta = cliente.get("/api/nao-existe")
+    assert "não encontrado" in resposta.get_data(as_text=True)
