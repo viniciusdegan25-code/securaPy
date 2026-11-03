@@ -39,6 +39,7 @@ class Deps:
     @classmethod
     def padrao(cls):
         """Dependências reais. O Mongo é conectado uma vez e reaproveitado."""
+        from api import enriquecimento
         from db import mongo_repo, mysql_repo
         from ml import classificar
 
@@ -50,7 +51,7 @@ class Deps:
             return banco["conexao"]
 
         return cls(mongo=mongo, mysql=mysql_repo.conectar, pontuar=classificar.pontuar,
-                   classificar_ip=classificar.classificar_ip, enriquecer=lambda ip: None)
+                   classificar_ip=classificar.classificar_ip, enriquecer=enriquecimento.enriquecer)
 
 
 def _ler_minutos(valor):
