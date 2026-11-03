@@ -6,12 +6,18 @@ de baixo (db/, ml/, core/) e devolvem JSON. Erros viram respostas pelo
 tratamento central em api/app.py.
 """
 
+from pathlib import Path
+
 from flask import Blueprint, current_app, jsonify, request
 
-from api.auth import emitir_token
-from api.validacao import (ValidacaoError, validar_ip, validar_paginacao, validar_periodo,
-                           validar_severidade)
+from api.auth import emitir_token, exige_token
+from api.servico import analisar_com_ml
+from api.validacao import (ValidacaoError, validar_corpo_alerta, validar_corpo_analise,
+                           validar_ip, validar_paginacao, validar_periodo, validar_severidade)
+from core.coletor import carregar_todos_os_logs
 from db import consultas_api, mysql_repo
+from db.configuracao import PASTA_LOGS
+from db.mongo_repo import id_alerta
 from ml.classificar import IntegridadeModeloError
 
 bp = Blueprint("api", __name__, url_prefix="/api")
@@ -127,3 +133,28 @@ def consultar_ip(ip):
         ml = {"disponivel": False}
 
     return jsonify({"ip": ip, "eventos": eventos, "alertas": alertas, "geo": geo, "ml": ml})
+
+
+# --------------------------------------------------------------------
+# Escrita (exige token)
+# --------------------------------------------------------------------
+
+@bp.post("/alertas")
+@exige_token
+def criar_alerta():
+    alerta = validar_corpo_alerta(corpo_json())
+    novo = consultas_api.criar_alerta(_deps().mongo(), alerta)
+    resposta = {"id": consultas_api.codificar_id(id_alerta(alerta))}
+    if novo:
+        return jsonify(resposta), 201
+    return jsonify({**resposta, "existente": True}), 200
+
+
+@bp.post("/analisar")
+@exige_token
+def analisar():
+    pedido = validar_corpo_analise(corpo_json(), Path(PASTA_LOGS))
+    if "eventos" in pedido:
+        return jsonify(analisar_com_ml(pedido["eventos"], _deps(), eventos_confiaveis=False))
+    eventos = carregar_todos_os_logs(str(pedido["pasta"]))
+    return jsonify(analisar_com_ml(eventos, _deps()))

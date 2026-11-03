@@ -17,6 +17,7 @@ TAMANHO_PADRAO = 20
 TAMANHO_MAXIMO = 100
 MAXIMO_EVENTOS = 5000
 MAXIMO_TEXTO_EVENTO = 1000
+FONTES = ("auth", "firewall", "web")
 CAMPOS_EVENTO = ("fonte", "ip", "timestamp", "tipo", "detalhes", "linha_original")
 
 
@@ -113,7 +114,22 @@ def _validar_evento(evento):
             raise ValidacaoError(f"evento inválido: {campo}")
         limpo[campo] = valor
     limpo["ip"] = validar_ip(limpo["ip"])
+    if limpo["fonte"] not in FONTES:
+        raise ValidacaoError("evento inválido: fonte")
+    validar_periodo(limpo["timestamp"])
+    if limpo["fonte"] == "firewall" and limpo["tipo"] == "BLOCK":
+        _conferir_porta_do_bloqueio(limpo["detalhes"])   # o núcleo faz int() dessa porta
     return limpo
+
+
+def _conferir_porta_do_bloqueio(detalhes):
+    for pedaco in detalhes.split():
+        if pedaco.startswith("dport="):
+            porta = pedaco.split("=", 1)[1]
+            if porta.isascii() and porta.isdigit() and 1 <= int(porta) <= 65535:
+                return
+            break
+    raise ValidacaoError("evento inválido: porta")
 
 
 def validar_corpo_analise(corpo, pasta_base):

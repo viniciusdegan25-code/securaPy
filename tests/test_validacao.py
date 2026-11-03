@@ -109,3 +109,21 @@ def test_corpo_analise_eventos_validos_e_limites(tmp_path):
         validar_corpo_analise({"eventos": [sem_ip]}, tmp_path)
     with pytest.raises(ValidacaoError):
         validar_corpo_analise({"eventos": [{**EVENTO, "ip": "zzz"}]}, tmp_path)
+
+
+@pytest.mark.parametrize("alteracao", [
+    {"fonte": "desconhecida"},
+    {"timestamp": "ontem"},
+    {"fonte": "firewall", "tipo": "BLOCK", "detalhes": "proto=TCP dst=10.0.0.1 dport=abc"},
+    {"fonte": "firewall", "tipo": "BLOCK", "detalhes": "proto=TCP dst=10.0.0.1"},
+    {"fonte": "firewall", "tipo": "BLOCK", "detalhes": "proto=TCP dst=10.0.0.1 dport=70000"},
+])
+def test_corpo_analise_rejeita_evento_que_quebraria_o_nucleo(tmp_path, alteracao):
+    with pytest.raises(ValidacaoError):
+        validar_corpo_analise({"eventos": [{**EVENTO, **alteracao}]}, tmp_path)
+
+
+def test_corpo_analise_aceita_evento_de_firewall_bem_formado(tmp_path):
+    bloqueio = {**EVENTO, "fonte": "firewall", "tipo": "BLOCK",
+                "detalhes": "proto=TCP dst=10.0.0.1 dport=22"}
+    assert validar_corpo_analise({"eventos": [bloqueio]}, tmp_path) == {"eventos": [bloqueio]}
