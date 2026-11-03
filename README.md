@@ -13,7 +13,7 @@
 |---|---|---|---|
 | Vinicius | 569279 | Núcleo + Persistência | A, B |
 | Gabriel D | PREENCHER | Machine Learning | C |
-| PREENCHER | PREENCHER | API REST + Docker | D, F |
+| Lino | PREENCHER | API REST + Docker | D, F |
 | Samuel Gonçalves | PREENCHER | Web + LLM | E, G |
 
 ---
@@ -42,7 +42,8 @@ securaPy_platform/
 ├── db/                         # PERSISTÊNCIA (Módulo B)
 │   ├── configuracao.py          # Lê o .env
 │   ├── mongo_repo.py            # Eventos e alertas no MongoDB
-│   └── mysql_repo.py            # Usuários e login no MySQL
+│   ├── mysql_repo.py            # Usuários e login no MySQL
+│   └── consultas_api.py         # Consultas paginadas do MongoDB para a API (Módulo D)
 ├── alertas/                     # TEMPO REAL (Módulo A)
 │   ├── servidor_alertas.py      # Servidor TCP com broadcast
 │   └── cliente_alertas.py       # Console do analista
@@ -58,17 +59,30 @@ securaPy_platform/
 │   ├── metricas.json            # Métricas geradas pelo treinamento
 │   ├── modelo.pkl               # Modelo treinado, gerado pelo treinamento
 │   └── modelo.sha256            # Hash SHA-256 do modelo salvo
-├── api/                        # Módulo D — ainda não incluído
+├── api/                        # API REST (Módulo D — Pessoa 3)
+│   ├── app.py                   # Fábrica create_app(): configuração, tratamento de erros, log de acesso
+│   ├── rotas.py                 # Rotas /api/* (eventos, alertas, ip, analisar, login, saude)
+│   ├── auth.py                  # Login e token JWT (HS256) com decorator @exige_token
+│   ├── validacao.py             # Validação de toda entrada (IP, paginação, corpos do POST)
+│   ├── servico.py               # Análise completa: núcleo + ML + banco
+│   └── enriquecimento.py        # Geolocalização por IP (ipinfo.io) com cache
 ├── web/                        # Módulo E — ainda não incluído
 ├── ia/                         # Módulo G — ainda não incluído
 ├── config/
 │   └── regras.json              # Regras de detecção
 ├── logs/                        # auth.log, firewall.log e web_access.log
 ├── saida/                       # Relatórios gerados
+├── scripts/                     # Apoio ao Docker (Módulo F — Pessoa 3)
+│   ├── verificar_docker.py      # Confere com o SDK do Docker se api, mongo e mysql estão "running"
+│   └── criar_operador.py        # Cria o primeiro operador no MySQL (senha pedida no terminal)
+├── tests/                       # Testes automatizados da API (pytest)
+├── Dockerfile                   # Imagem da API (Python 3.12, gunicorn, usuário sem root)
+├── docker-compose.yml           # API + MongoDB + MySQL na mesma rede
 ├── analisar.py                  # Executa o fluxo de análise e salva no banco
 ├── migrar_logs.py               # Migra logs para o MongoDB
 ├── .env.exemplo                 # Modelo das variáveis de ambiente
-├── requirements.txt             # Dependências gerais do projeto
+├── requirements.txt             # Dependências do projeto (e da imagem Docker)
+├── requirements-dev.txt         # Dependências só para testes (pytest, mongomock)
 └── README.md
 ```
 
@@ -89,10 +103,14 @@ logs/ → coletor → regras → detector → correlação → MongoDB (eventos 
 - MongoDB (Atlas no desenvolvimento, contêiner no Docker)
 - MySQL 8 (contêiner Docker)
 
+- Docker e Docker Compose (para o Módulo F)
+
 ```bash
 python -m pip install -r requirements.txt
-python -m pip install -r ml/requirements.txt
+python -m pip install -r requirements-dev.txt   # só para rodar os testes
 ```
+
+O `scikit-learn` está fixado em `1.9.0`, a mesma versão que treinou o `ml/modelo.pkl`.
 
 ---
 
@@ -110,6 +128,13 @@ MYSQL_PORTA=3306
 MYSQL_USUARIO=root
 MYSQL_SENHA=SENHA_AQUI
 MYSQL_BANCO=securapy
+JWT_SECRET=               # mínimo 32 caracteres; gere com o comando abaixo
+JWT_EXPIRA_MINUTOS=60
+MYSQL_ROOT_PASSWORD=      # usado só pelo Docker Compose
+```
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"   # gera o JWT_SECRET
 ```
 
 ### 2. Subir o MySQL (Docker)
@@ -130,7 +155,19 @@ docker run -d --name securapy-mysql -e MYSQL_ROOT_PASSWORD=SENHA_AQUI -e MYSQL_D
 
 ### Execução com Docker
 
-PREENCHER — Pessoa 3 (`docker-compose up`).
+Com o `.env` preenchido (`JWT_SECRET` e `MYSQL_ROOT_PASSWORD` são obrigatórios; sem eles o Compose avisa e não sobe):
+
+```bash
+docker compose up --build            # sobe API, MongoDB e MySQL
+curl http://localhost:8000/api/saude # {"status":"ok"}
+docker compose exec api python -m scripts.criar_operador --nome "Analista SOC" --email analista@securapy.com
+python -m scripts.verificar_docker   # lista api, mongo e mysql com o status de cada um
+docker compose down                  # para tudo (os dados ficam nos volumes)
+```
+
+Dentro do Compose a API usa o MongoDB e o MySQL dos contêineres (as variáveis do serviço têm prioridade
+sobre o `.env`, então o Atlas do desenvolvimento não é tocado). Só a porta `8000` da API é publicada no
+computador; os bancos ficam acessíveis somente pela rede interna `securapy-net`.
 
 ---
 
@@ -234,10 +271,83 @@ Os testes foram executados com `python -m pytest ml/test_ml.py`: **6 aprovados**
 
 ### Pessoa 3 — API REST e Docker (Módulos D e F)
 
-**Responsável:** PREENCHER
+**Responsável:** Lino
 
-PREENCHER: rotas da API, autenticação por token, `Dockerfile` e `docker-compose.yml`.
-Para a rota `POST /api/analisar`, basta chamar `analisar(pasta_logs)` de `analisar.py`.
+#### Módulo D — API REST (Flask)
+
+A API é a porta de entrada da plataforma: dashboards e automações consultam os dados por aqui, sem tocar
+nos bancos. Ela reaproveita o núcleo, o ML e a persistência sem alterá-los.
+
+| Rota | Auth | O que faz |
+|---|---|---|
+| `GET /api/saude` | não | Responde `{"status":"ok"}` (usada no healthcheck do Docker) |
+| `POST /api/login` | não | Confere email e senha no MySQL e devolve um JWT com validade (padrão 60 min) |
+| `GET /api/eventos` | não | Eventos com filtros `fonte`, `tipo`, `ip`, `inicio`, `fim` e paginação (`pagina`, `tamanho` de 1 a 100) |
+| `GET /api/alertas` | não | Alertas com filtros `severidade` e `ip` e a mesma paginação |
+| `GET /api/alertas/<id>` | não | Um alerta pelo `id` devolvido na listagem |
+| `POST /api/alertas` | **Bearer** | Cria um alerta (201); se já existir, responde 200 com `"existente": true` |
+| `POST /api/analisar` | **Bearer** | Analisa `{"pasta": "<subpasta de logs/>"}` ou `{"eventos": [...]}` (até 5000), pontua com o ML, grava no MongoDB e devolve o resumo |
+| `GET /api/ip/<ip>` | não | Eventos, alertas, geolocalização e score de ML do IP |
+
+```bash
+# 1. login (devolve {"token": "...", "expira_em": 3600})
+curl -X POST localhost:8000/api/login -H "Content-Type: application/json" \
+     -d '{"email":"analista@securapy.com","senha":"..."}'
+
+# 2. rota protegida
+curl -X POST localhost:8000/api/analisar -H "Authorization: Bearer <token>" \
+     -H "Content-Type: application/json" -d '{"pasta":"."}'
+
+# 3. consulta com filtro e paginação
+curl "localhost:8000/api/alertas?severidade=critica&pagina=1&tamanho=5"
+curl localhost:8000/api/ip/185.220.101.1
+```
+
+**Respostas de erro** (sempre `{"erro": "..."}`): `400` entrada inválida, `401` sem token válido ou
+credenciais erradas, `404` não encontrado, `413` corpo maior que 1 MB, `503` banco indisponível e
+`500` genérico (o traceback fica só no log do servidor).
+
+**Segurança aplicada:**
+- **JWT** HS256 com algoritmo fixo na validação (recusa `alg: none`), expiração curta e `JWT_SECRET` obrigatório
+  com pelo menos 32 caracteres (senão a API nem inicia).
+- Login com **a mesma resposta** para usuário inexistente e senha errada.
+- **Validação de toda entrada** (`api/validacao.py`): IP com o módulo `ipaddress`, severidade e datas em lista
+  fechada, paginação limitada, corpos que não são objeto JSON viram 400 e campos extras são descartados.
+- `POST /api/analisar` só aceita pastas **dentro de `logs/`** (bloqueia path traversal) e nunca devolve caminhos do servidor.
+- Filtros do MongoDB viram texto com `str()` (contra NoSQL Injection), reaproveitando o `db/mongo_repo.py`.
+- Erros internos **não vazam** traceback, query, caminho nem segredo.
+- Geolocalização com timeout de 3 s, cache de 1 h e sem consultar IP privado; se falhar, `geo` vem `null`.
+- Cada requisição gera uma linha de log de acesso (OWASP A09).
+
+#### Módulo F — Docker
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `Dockerfile` | Imagem `python:3.12-slim`, instala o `requirements.txt` antes do código (cache), roda com usuário sem root, `HEALTHCHECK` em `/api/saude` e gunicorn |
+| `docker-compose.yml` | Serviços `api`, `mongo` (7) e `mysql` (8.0) na rede `securapy-net`, com healthchecks; a API só sobe quando os bancos estão saudáveis; volumes para os dados; segredos só do `.env` |
+| `scripts/verificar_docker.py` | Usa o SDK `docker` para listar os contêineres do projeto e sair com código ≠ 0 se algum não estiver `running` |
+| `scripts/criar_operador.py` | Cria o operador no MySQL; a senha é pedida no terminal ou vem de `OPERADOR_SENHA`, nunca da linha de comando |
+
+| Teste | Esperado | Resultado |
+|---|---|---|
+| D1 | `GET /api/alertas?severidade=critica&pagina=1&tamanho=5` devolve alertas críticos paginados | ✅ `tests/test_rotas_leitura.py` |
+| D2 | `GET /api/ip/185.220.101.1` traz eventos, alertas, geolocalização e score | ✅ `tests/test_rotas_leitura.py` |
+| D3 | `POST /api/alertas` sem token devolve 401 | ✅ `tests/test_rotas_escrita.py` |
+| D4 | `POST /api/alertas` com corpo inválido devolve 400 | ✅ `tests/test_rotas_escrita.py` |
+| D5 | `GET /api/ip/<malformado>` devolve 400 amigável | ✅ `tests/test_rotas_leitura.py` |
+| F1 | `docker compose up` sobe os 3 serviços | PREENCHER: conferir na máquina com Docker |
+| F2 | `python -m scripts.verificar_docker` lista os 3 como `running` | PREENCHER: conferir na máquina com Docker |
+| F3 | `GET /api/saude` dentro do Compose responde 200 | PREENCHER: conferir na máquina com Docker |
+
+Os testes da API rodam sem Mongo, MySQL nem internet (bancos em memória): `python -m pytest`.
+
+#### Reaproveitamento do 1º semestre e dos outros módulos
+
+- `api/servico.py` usa `analisar.executar_nucleo()` (regras, detector e correlação) e `core.coletor`; o fluxo
+  repete a ordem de `analisar.analisar()` porque precisa pontuar com o ML e gravar no banco já conectado da
+  API, sem escrever relatório em disco. Dá para unificar depois.
+- Login: `db.mysql_repo.autenticar()`. Score: `ml.classificar.pontuar()` e `classificar_ip()`.
+- Consultas: `db.mongo_repo` (filtro anti-NoSQL-injection e `salvar_*`); a paginação fica em `db/consultas_api.py`.
 
 ---
 
@@ -283,8 +393,8 @@ Severidades: `CRITICA`, `ALTA`, `MEDIA`, `BAIXA`, `INFO`.
 |---|---|---|---|
 | Correlação temporal | +0,20 | Pessoa 1 | ✅ |
 | Isolation Forest | +0,30 | Pessoa 2 | PREENCHER |
-| Testes automatizados (pytest) | +0,30 | PREENCHER | PREENCHER |
-| Autenticação JWT | +0,20 | PREENCHER | PREENCHER |
+| Testes automatizados (pytest) | +0,30 | Pessoa 2 (`ml/test_ml.py`) e Pessoa 3 (`tests/`) | ✅ |
+| Autenticação JWT | +0,20 | Pessoa 3 | ✅ `api/auth.py` |
 
 ---
 
@@ -292,5 +402,11 @@ Severidades: `CRITICA`, `ALTA`, `MEDIA`, `BAIXA`, `INFO`.
 
 - O enunciado indica 10 falhas de login para o IP `185.220.101.1`, mas o `auth.log` fornecido contém
   **11** (08:15:01, :02, :06, :08, :16, :18, :22, :28, :33, :38, :40). O sistema reporta o valor real.
+- No Docker Compose o MongoDB roda **sem autenticação**, apenas na rede interna e sem porta publicada;
+  é suficiente para a demonstração, mas um ambiente real deveria ativar usuário e senha.
+- O cache de geolocalização é por processo: com 2 workers do gunicorn existem 2 caches.
+- `GET /api/ip/<ip>` envia ao ML no máximo os 200 primeiros eventos do IP, então o score pode ser
+  subestimado para IPs com mais eventos que isso.
+- O dashboard (Módulo E, `web/`) roda como processo separado; a unificação no Compose fica para a integração final.
 - O MongoDB usa o Atlas durante o desenvolvimento, para o grupo compartilhar os mesmos dados; no Docker,
   basta trocar o `MONGO_URI` no `.env`, sem mudar o código.
