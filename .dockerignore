@@ -1,0 +1,17 @@
+# Segredos e coisas locais: nunca entram na imagem
+.env
+.git
+.gitignore
+.venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Não são necessários para rodar a API
+tests/
+saida/
+logs_gerados/
+Dockerfile
+docker-compose.yml
+.dockerignore
+requirements-dev.txt
