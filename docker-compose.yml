@@ -1,0 +1,115 @@
+# SecuraPy (Módulo F): API + dashboard + MongoDB + MySQL na mesma rede, com um comando só.
+#
+#   cp .env.exemplo .env      (preencha JWT_SECRET, FLASK_SECRET_KEY e MYSQL_ROOT_PASSWORD)
+#   docker compose up --build
+#
+# A API publica a porta 8000 e o dashboard a 5000. Os bancos ficam acessíveis
+# apenas pela rede interna "securapy-net". Os dados ficam em volumes nomeados.
+
+name: securapy
+
+services:
+  api:
+    build: .
+    image: securapy-api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Dentro do Compose os bancos são os contêineres; estas linhas
+      # têm prioridade sobre o que estiver no .env (ex.: o Atlas do desenvolvimento).
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_BANCO: securapy
+      MYSQL_HOST: mysql
+      MYSQL_PORTA: "3306"
+      MYSQL_USUARIO: root
+      MYSQL_SENHA: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_BANCO: securapy
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      JWT_EXPIRA_MINUTOS: ${JWT_EXPIRA_MINUTOS:-60}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - securapy-net
+    restart: unless-stopped
+
+  web:
+    # Mesmo código e mesma imagem da API (o cache do Docker reaproveita o build);
+    # muda só o processo iniciado: o dashboard na porta 5000
+    build: .
+    image: securapy-api
+    command: ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "web.app:app"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_BANCO: securapy
+      MYSQL_HOST: mysql
+      MYSQL_PORTA: "3306"
+      MYSQL_USUARIO: root
+      MYSQL_SENHA: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_BANCO: securapy
+      # Os 2 workers precisam da MESMA chave, senão a sessão do login se perde
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?defina FLASK_SECRET_KEY no .env}
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:5000/login', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      api:
+        condition: service_started
+      mongo:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - securapy-net
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-dados:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - securapy-net
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no .env}
+      MYSQL_DATABASE: securapy
+    volumes:
+      - mysql-dados:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - securapy-net
+    restart: unless-stopped
+
+networks:
+  securapy-net:
+
+volumes:
+  mongo-dados:
+  mysql-dados:

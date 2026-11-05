@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=8.0
+mongomock>=4.1
+# mongomock 4.3 ainda não aceita o parâmetro "sort" do pymongo >= 4.11 (só afeta os testes)
+pymongo<4.11

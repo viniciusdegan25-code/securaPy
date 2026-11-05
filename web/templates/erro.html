@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block titulo %}Erro {{ codigo }} · SecuraPy{% endblock %}
+{% block conteudo %}
+<section class="login-card">
+  <p class="eyebrow">ERRO {{ codigo }}</p>
+  <h1>Algo deu errado</h1>
+  <p class="muted">{{ mensagem }}</p>
+  <p><a href="{{ url_for('dashboard') }}">Voltar ao painel</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block titulo %}Visão geral · SecuraPy{% endblock %}
+{% block conteudo %}
+<div class="page-heading"><div><p class="eyebrow">CENTRO DE OPERAÇÕES</p><h1>Visão geral</h1><p class="muted">Resumo dos eventos e alertas registrados.</p></div></div>
+{% if not banco_disponivel %}<p class="aviso erro">O MongoDB está indisponível: os dados abaixo podem estar vazios.</p>{% endif %}
+<section class="metric-grid">
+  <article class="panel"><h2>Eventos por fonte</h2><dl class="stats">
+    {% for fonte, total in fontes.items() %}<div><dt>{{ fonte }}</dt><dd>{{ total }}</dd></div>{% else %}<p class="muted">Sem dados disponíveis.</p>{% endfor %}
+  </dl></article>
+  <article class="panel"><h2>Alertas por severidade</h2><dl class="stats">
+    {% for nivel, total in severidades.items() %}<div><dt><span class="badge {{ nivel|lower }}">{{ nivel }}</span></dt><dd>{{ total }}</dd></div>{% else %}<p class="muted">Sem dados disponíveis.</p>{% endfor %}
+  </dl></article>
+</section>
+<section class="panel section-gap">
+  <div class="section-title"><div><h2>Pesquisar endereço IP</h2><p class="muted">Consulte eventos, alertas e triagem assistida.</p></div></div>
+  <form class="search-form" method="get" action="{{ url_for('buscar_ip') }}"><label class="sr-only" for="ip">Endereço IP</label><input id="ip" name="ip" placeholder="Ex.: 185.220.101.1" required><button class="primary" type="submit">Buscar</button></form>
+</section>
+<section class="panel section-gap"><div class="section-title"><h2>IPs com mais eventos</h2></div>
+  <div class="table-wrap"><table><thead><tr><th>Endereço IP</th><th>Eventos</th><th></th></tr></thead><tbody>
+  {% for item in top_ips %}<tr><td class="mono">{{ item.ip }}</td><td>{{ item.total }}</td><td><a href="{{ url_for('detalhe_ip', ip=item.ip) }}">Ver detalhes</a></td></tr>{% else %}<tr><td colspan="3" class="muted">Nenhum evento disponível.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<section class="panel section-gap"><div class="section-title"><h2>Alertas recentes</h2></div>
+  <div class="table-wrap"><table><thead><tr><th>Horário</th><th>Severidade</th><th>IP</th><th>Descrição</th></tr></thead><tbody>
+  {% for alerta in alertas %}<tr><td class="mono">{{ alerta.timestamp }}</td><td><span class="badge {{ alerta.severidade|lower }}">{{ alerta.severidade }}</span></td><td><a class="mono" href="{{ url_for('detalhe_ip', ip=alerta.ip) }}">{{ alerta.ip }}</a></td><td>{{ alerta.descricao }}</td></tr>{% else %}<tr><td colspan="4" class="muted">Nenhum alerta disponível.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

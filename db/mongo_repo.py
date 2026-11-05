@@ -9,7 +9,7 @@ O endereço do banco vem do .env (MONGO_URI): Atlas no desenvolvimento,
 contêiner do Docker na apresentação final. O código é o mesmo nos dois.
 """
 
-from pymongo import ASCENDING, MongoClient, UpdateOne
+from pymongo import ASCENDING, DESCENDING, MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
 
 from db.configuracao import ler_variavel
@@ -22,15 +22,27 @@ COLECAO_ALERTAS = "alertas"
 # Conexão e índices
 # --------------------------------------------------------------------
 
+# Clientes já conectados, por endereço. O MongoClient tem um "pool" de
+# conexões interno e deve ser criado UMA vez e reaproveitado: criar um novo
+# a cada chamada (ex.: a cada página do dashboard) deixa conexões abertas.
+_clientes = {}
+
+
 def conectar():
     """
     Conecta ao MongoDB usando o MONGO_URI do .env.
     Retorna o banco (database) ou None se não for possível conectar.
+    Chamadas seguintes reaproveitam o mesmo cliente (sem novo "ping").
     """
     endereco = ler_variavel("MONGO_URI")
     if endereco is None:
         print("[ERRO] MONGO_URI não definido no arquivo .env.")
         return None
+    nome_banco = ler_variavel("MONGO_BANCO", "securapy")
+
+    cliente = _clientes.get(endereco)
+    if cliente is not None:
+        return cliente[nome_banco]
 
     try:
         cliente = MongoClient(endereco, serverSelectionTimeoutMS=8000)
@@ -41,7 +53,7 @@ def conectar():
               "Os dados ficarão só em memória.")
         return None
 
-    nome_banco = ler_variavel("MONGO_BANCO", "securapy")
+    _clientes[endereco] = cliente   # só guarda depois que o ping deu certo
     print(f"[OK] Conectado ao MongoDB (banco '{nome_banco}').")
     return cliente[nome_banco]
 
@@ -140,10 +152,10 @@ def _montar_filtro(campos):
     return {campo: str(valor) for campo, valor in campos.items() if valor is not None}
 
 
-def _buscar(colecao, filtro, limite):
+def _buscar(colecao, filtro, limite, direcao=ASCENDING):
     """Executa a busca, ordenada por horário, sem o campo _id."""
     try:
-        cursor = colecao.find(filtro, {"_id": 0}).sort("timestamp", ASCENDING)
+        cursor = colecao.find(filtro, {"_id": 0}).sort("timestamp", direcao)
         return list(cursor.limit(int(limite)))
     except PyMongoError as erro:
         print(f"[ERRO] Falha na busca: {erro.__class__.__name__}")
@@ -165,12 +177,16 @@ def buscar_eventos(banco, fonte=None, tipo=None, ip=None,
     return _buscar(banco[COLECAO_EVENTOS], filtro, limite)
 
 
-def buscar_alertas(banco, severidade=None, ip=None, limite=100):
-    """Busca alertas com filtros opcionais por severidade e IP."""
+def buscar_alertas(banco, severidade=None, ip=None, limite=100, mais_recentes=False):
+    """
+    Busca alertas com filtros opcionais por severidade e IP.
+    mais_recentes=True traz os últimos primeiro (usado no dashboard).
+    """
     if banco is None:
         return []
     filtro = _montar_filtro({"severidade": severidade, "ip": ip})
-    return _buscar(banco[COLECAO_ALERTAS], filtro, limite)
+    direcao = DESCENDING if mais_recentes else ASCENDING
+    return _buscar(banco[COLECAO_ALERTAS], filtro, limite, direcao)
 
 
 # --------------------------------------------------------------------

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections import Counter
 from pathlib import Path
@@ -18,6 +17,7 @@ from sklearn.preprocessing import StandardScaler
 
 from core.coletor import carregar_todos_os_logs
 from ferramentas.gerador_logs import PASTA_SAIDA, gerar_logs
+from ml.classificar import sha256_arquivo
 from ml.features import FEATURES, montar_features
 
 PASTA_ML = Path(__file__).resolve().parent
@@ -75,15 +75,6 @@ def construir_pipeline() -> Pipeline:
             random_state=42,
         )),
     ])
-
-
-def sha256_arquivo(caminho: str | Path) -> str:
-    """Calcula o SHA-256 de um arquivo lendo-o em blocos."""
-    digest = hashlib.sha256()
-    with open(caminho, "rb") as arquivo:
-        for bloco in iter(lambda: arquivo.read(65536), b""):
-            digest.update(bloco)
-    return digest.hexdigest()
 
 
 def treinar(

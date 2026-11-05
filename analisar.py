@@ -6,12 +6,13 @@ Executa o fluxo inteiro do SIEM, na ordem:
     2. regras      -> alertas evento a evento (regras.json)
     3. detector    -> brute force, port scan, blacklist + resumo por IP
     4. correlação  -> brute force por janela de tempo (bônus)
-    5. MongoDB     -> grava eventos e alertas (sem duplicar)
-    6. relatório   -> exporta tudo em JSON na pasta saida/
+    5. ML          -> score de risco de cada IP suspeito (Módulo C)
+                      + anomalias por Isolation Forest (bônus)
+    6. MongoDB     -> grava eventos e alertas (sem duplicar)
+    7. relatório   -> exporta tudo em JSON na pasta saida/
 
-É esta função que a API (Pessoa 3) chama no POST /api/analisar:
-    from analisar import analisar
-    resultado = analisar("logs")
+A API (Pessoa 3) reaproveita executar_nucleo() no POST /api/analisar
+(arquivo api/servico.py).
 
 Uso no terminal (na raiz do projeto):
     python analisar.py                 -> analisa a pasta logs/
@@ -60,6 +61,35 @@ def executar_nucleo(eventos):
     return alertas, resumo
 
 
+def pontuar_com_ml(ameacas, eventos):
+    """
+    Acrescenta o score de risco do ML (Módulo C) a cada IP suspeito e ordena
+    do maior risco para o menor. Se o modelo faltar ou o hash não conferir,
+    devolve as ameaças sem score: a análise nunca para por causa do ML.
+    Retorna (ameacas, ml_disponivel).
+    """
+    from ml.classificar import IntegridadeModeloError, pontuar
+
+    try:
+        return pontuar(ameacas, eventos), True
+    except IntegridadeModeloError:
+        print("[ALERTA] O hash do modelo de ML não confere: análise feita sem score.")
+    except (FileNotFoundError, ValueError) as erro:
+        print(f"[AVISO] ML indisponível ({erro.__class__.__name__}): análise feita sem score.")
+    return ameacas, False
+
+
+def detectar_anomalias(eventos):
+    """IPs com comportamento fora do normal (Isolation Forest). [] se o ML falhar."""
+    from ml.anomalias import detectar_anomalias as isolation_forest
+
+    try:
+        return [item for item in isolation_forest(eventos) if item["anomalia"]]
+    except (OSError, ValueError) as erro:
+        print(f"[AVISO] Detecção de anomalias indisponível ({erro.__class__.__name__}).")
+        return []
+
+
 def persistir(eventos, alertas):
     """Grava eventos e alertas no MongoDB. Retorna quantos eram novos."""
     banco = mongo_repo.conectar()
@@ -94,6 +124,7 @@ def analisar(pasta_logs=PASTA_LOGS, salvar_no_banco=True, gerar_relatorio=True):
     eventos = carregar_todos_os_logs(pasta_logs)
     alertas, ameacas = executar_nucleo(eventos)
     alertas.sort(key=lambda alerta: ORDEM_SEVERIDADE.index(alerta["severidade"]))
+    ameacas, ml_disponivel = pontuar_com_ml(ameacas, eventos)
 
     resultado = {
         "gerado_em": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -103,6 +134,8 @@ def analisar(pasta_logs=PASTA_LOGS, salvar_no_banco=True, gerar_relatorio=True):
         "alertas_por_severidade": contar_por_severidade(alertas),
         "ameacas": ameacas,
         "alertas": alertas,
+        "ml_disponivel": ml_disponivel,
+        "anomalias": detectar_anomalias(eventos),
     }
     if salvar_no_banco:
         resultado["persistencia"] = persistir(eventos, alertas)
@@ -121,7 +154,13 @@ def exibir_resultado(resultado):
 
     print("\nAmeaças por IP (da mais grave para a menor):")
     for item in resultado["ameacas"]:
-        print(f"   [{item['severidade']:<7}] {item['ip']:<16} {item['quantidade_deteccoes']} detecções")
+        score = f"  score ML {item['score_ml']:.2f} ({item['risco_ml']})" if "score_ml" in item else ""
+        print(f"   [{item['severidade']:<7}] {item['ip']:<16} "
+              f"{item['quantidade_deteccoes']} detecções{score}")
+
+    if resultado.get("anomalias"):
+        ips = ", ".join(item["ip"] for item in resultado["anomalias"])
+        print(f"\nAnomalias (Isolation Forest): {ips}")
 
     persistencia = resultado.get("persistencia")
     if persistencia and persistencia["banco_disponivel"]:
